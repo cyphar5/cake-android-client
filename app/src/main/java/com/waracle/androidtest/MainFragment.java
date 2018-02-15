@@ -3,6 +3,7 @@ package com.waracle.androidtest;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.ListFragment;
 import android.support.v7.widget.LinearLayoutManager;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -41,14 +43,14 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class MainFragment extends Fragment implements RefreshFragmentListener , AsyncTaskListener {
+public class MainFragment extends Fragment implements RefreshFragmentListener, AsyncTaskListener {
 
     public static final String TAG = MainFragment.class.getSimpleName();
 
     private RecyclerView mListView;
     private CakeAdapter mAdapter;
     private List<Cake> list = new LinkedList<>();
-    private boolean isProgressTrue = true ;
+    private boolean isProgressTrue = true;
 
     public MainFragment() { /**/ }
 
@@ -62,18 +64,27 @@ public class MainFragment extends Fragment implements RefreshFragmentListener , 
         ((MainActivity) getActivity()).setRefreshFragmentListener(MainFragment.this);
         mListView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-        if (Util.isNetworkAvailable(getContext()))
-            loadData();
-        else
-            Toast.makeText(getActivity(), "Network Not Available", Toast.LENGTH_SHORT).show();
         mAdapter = new CakeAdapter(getActivity());
         Log.d("MF_FRAG", "madapter " + mAdapter);
         mListView.setAdapter(mAdapter);
+
+        if (savedInstanceState == null) {
+            if (Util.isNetworkAvailable(getContext()))
+                loadData();
+            else
+                Toast.makeText(getActivity(), "Network Not Available", Toast.LENGTH_SHORT).show();
+        } else {
+            list = savedInstanceState.getParcelableArrayList("cake");
+            mAdapter.setItems(list);
+            mAdapter.notifyDataSetChanged();
+        }
+
+
         return rootView;
     }
 
     public void loadData() {
-        if(isProgressTrue) {
+        if (isProgressTrue) {
             AsyncTaskRunner runner = new AsyncTaskRunner(getContext(), MainFragment.this, this);
             runner.execute();
         }
@@ -103,14 +114,20 @@ public class MainFragment extends Fragment implements RefreshFragmentListener , 
 
     @Override
     public void onProgress() {
-        isProgressTrue = true ;
+        isProgressTrue = true;
     }
 
     @Override
     public void onFinish() {
-        isProgressTrue = false ;
+        isProgressTrue = false;
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList("cake", (ArrayList<? extends Parcelable>) list);
+
+    }
 
     /**
      * Returns the charset specified in the Content-Type of this header,
